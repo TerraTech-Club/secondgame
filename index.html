@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TerraTech</title>
+    <link rel="icon" type="image/jpg" href="./terra.jpg">
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #0a0a0a;
+            color: #33ff33;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .terminal {
+            background-color: #000;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        h1 {
+            color: #33ff33;
+            text-align: center;
+        }
+        .club-name {
+            font-family: 'Mochiy Pop One', sans-serif;
+            color: #00ff00;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            font-size: 24px;
+            animation: glow 1.5s ease-in-out infinite alternate;
+            margin-bottom: 20px;
+        }
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #fff, 0 0 10px #33ff33, 0 0 15px #33ff33;
+            }
+            to {
+                text-shadow: 0 0 10px #fff, 0 0 20px #33ff33, 0 0 30px #33ff33;
+            }
+        }
+        .game-area {
+            margin-top: 20px;
+        }
+        input {
+            background-color: #0a0a0a;
+            color: #33ff33;
+            border: 1px solid #33ff33;
+            padding: 5px;
+            width: 100px;
+        }
+        button {
+            background-color: #33ff33;
+            color: #0a0a0a;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        button:hover {
+            background-color: #2faa2f;
+        }
+        #gameOutput {
+            white-space: pre-wrap;
+            margin-top: 20px;
+            line-height: 1.5;
+        }
+        .blinking-cursor {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .hidden {
+            display: none;
+        }
+        #flagDisplay {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #001100;
+            border: 1px solid #33ff33;
+        }
+        #timestamp {
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: #aaffaa;
+        }
+        #attemptCounter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #001100;
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #33ff33;
+        }
+        #restartButton {
+            margin-top: 20px;
+            background-color: #ff3333;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <h1>TerraTech Game</h1>
+        <div id="attemptCounter">Attempts: <span id="currentAttempts">0</span>/10</div>
+        <div class="game-area">
+            <div id="gameOutput">Welcome to the Binary Search Game!
+I'm thinking of a number between 1 and 1000.
+Enter your guess: <span class="blinking-cursor">█</span></div>
+            <div id="inputArea">
+                <input type="number" id="guessInput" placeholder="Enter guess" min="1" max="1000">
+                <button id="submitGuess">Submit</button>
+            </div>
+            <div id="flagDisplay" class="hidden">
+                <p>Congratulations! Here's your flag: <span id="flag">TerraTechFlag{Navkis__HackLoom__FristFlag}</span></p>
+                <p id="timestamp"></p>
+            </div>
+            <div id="restartArea" class="hidden">
+                <button id="restartButton">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate a random number between 1 and 1000
+        function getRandomNumber(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+        
+        let targetNumber = getRandomNumber(1, 1000); // Generate random number on page load
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const guessInput = document.getElementById('guessInput');
+        const submitButton = document.getElementById('submitGuess');
+        const gameOutput = document.getElementById('gameOutput');
+        const flagDisplay = document.getElementById('flagDisplay');
+        const timestampDisplay = document.getElementById('timestamp');
+        const attemptCounter = document.getElementById('currentAttempts');
+        const restartArea = document.getElementById('restartArea');
+        const restartButton = document.getElementById('restartButton');
+        const inputArea = document.getElementById('inputArea');
+        
+        // For debugging - remove this in production
+        console.log("Target number:", targetNumber);
+        
+        guessInput.focus();
+        
+        submitButton.addEventListener('click', processGuess);
+        guessInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                processGuess();
+            }
+        });
+        
+        restartButton.addEventListener('click', restartGame);
+        
+        function processGuess() {
+            const guess = parseInt(guessInput.value);
+            guessInput.value = '';
+            
+            if (isNaN(guess) || guess < 1 || guess > 1000) {
+                gameOutput.innerHTML += '\nPlease enter a valid number between 1 and 1000.\nEnter your guess: <span class="blinking-cursor">█</span>';
+                scrollToBottom();
+                return;
+            }
+            
+            attempts++;
+            attemptCounter.textContent = attempts + '/10';
+            
+            if (guess === targetNumber) {
+                gameOutput.innerHTML += `\n${guess}\nCongratulations! You guessed the correct number: ${targetNumber}`;
+                showFlag();
+            } else if (attempts >= maxAttempts) {
+                gameOutput.innerHTML += `\n${guess}\nSorry, you've used all 10 attempts! The number was ${targetNumber}.`;
+                gameOver();
+            } else if (guess < targetNumber) {
+                gameOutput.innerHTML += `\n${guess}\nHigher! Try again. (${maxAttempts - attempts} attempts remaining)\nEnter your guess: <span class="blinking-cursor">█</span>`;
+            } else {
+                gameOutput.innerHTML += `\n${guess}\nLower! Try again. (${maxAttempts - attempts} attempts remaining)\nEnter your guess: <span class="blinking-cursor">█</span>`;
+            }
+            
+            scrollToBottom();
+            guessInput.focus();
+        }
+        
+        function showFlag() {
+            flagDisplay.classList.remove('hidden');
+            inputArea.classList.add('hidden');
+            restartArea.classList.remove('hidden');
+            
+            // Format the current time in HH:MM:SS format
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timestamp = `Flag submitted at: ${hours}:${minutes}:${seconds}`;
+            
+            timestampDisplay.textContent = timestamp;
+        }
+        
+        function gameOver() {
+            inputArea.classList.add('hidden');
+            restartArea.classList.remove('hidden');
+        }
+        
+        function restartGame() {
+            attempts = 0;
+            attemptCounter.textContent = '0/10';
+            // Generate a new random number when restarting
+            targetNumber = getRandomNumber(1, 1000);
+            // For debugging - remove this in production
+            console.log("New target number:", targetNumber);
+            
+            gameOutput.innerHTML = 'Welcome to the Binary Search Game!\nI\'m thinking of a number between 1 and 1000.\nEnter your guess: <span class="blinking-cursor">█</span>';
+            flagDisplay.classList.add('hidden');
+            inputArea.classList.remove('hidden');
+            restartArea.classList.add('hidden');
+            guessInput.focus();
+        }
+        
+        function scrollToBottom() {
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+    </script>
+</body>
+</html>
